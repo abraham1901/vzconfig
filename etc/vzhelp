@@ -1,0 +1,686 @@
+tmp_help=`mktemp -p /tmp -t result.1.XXXXXX`
+
+h_Performing_VE_actions () {
+(
+cat <<EOF  
+   Create new VE
+        Creates a new VE area. This operation should be done once, 
+        before the first start of the VE.
+
+   start
+        Mounts (if necessary) and starts a VE.
+   stop
+        Stops and unmounts a VE.
+
+   restart
+        Restarts a VE, i.e. stops it if it is running, and starts
+        again.
+
+   status
+        Shows a VE status. Basically this is a line with five words
+        separated  by  spaces. First  word  is  literally  VEID.
+        Second word is the numeric VE ID.  Third word is showing
+        whether this VE exists or not, it can be either exist or
+        deleted. Fourth word  is  showing  the status  of  the VE
+        filesystem, it can be either mounted or unmounted.  Fifth 
+        word shows if the VE is running, it can  be either  running 
+        or down.
+
+   mount
+        Mounts VE private area.
+
+   umount
+        Unmounts VE private area. Note that stop does umount
+        automatically.
+
+   destroy
+        Removes a VE private area by deleting all files, directories
+        and configuration file of this VE.
+
+EOF
+) > $tmp_help
+}
+
+h_sel_action () {
+(
+cat <<EOF
+   Performing VE actions
+        Create new VE
+        start
+        stop
+        restart
+        status
+        mount
+        umount
+        destroy
+   Setting VE parameters
+        Network parameters
+        Miscellaneous parameters
+        Set all parameters to default value
+        Primary parameters
+        Secondary parameters
+        Auxiliary parameters
+        To apply the user options #1, #2, #3
+EOF
+) > $tmp_help
+}
+
+h_sel_ve () {
+(
+cat <<EOF
+	Choose VE
+	
+EOF
+) > $tmp_help
+}
+
+h_sel_pg () {
+(
+cat <<EOF
+Network parameters
+   IP_ADDRESS
+   HOSTNAME
+   NAMESERVER
+   SEARCHDOMAIN
+
+Miscellaneous parameters
+   ONBOOT yes|no
+   NAME
+		
+Set all parameters to default value
+   Applies parameters by default.
+
+Primary parameters
+   NUMPROC
+   AVNUMPROC
+   NUMTCPSOCK
+   NUMOTHERSOCK
+   VMGUARPAGES
+
+Secondary parameters
+   KMEMSIZE
+   TCPSNDBUF
+   TCPRCVBUF
+   OTHERSOCKBUF
+   DGRAMRCVBUF
+   OOMGUARPAGES
+   PRIVVMPAGES
+	
+Auxiliary parameters
+   LOCKEDPAGES
+   SHMPAGES
+   PHYSPAGES
+   NUMFILE
+   NUMFLOCK
+   NUMPTY
+   NUMSIGINFO
+   DCACHESIZE
+   NUMIPTENT
+   DISKSPACE
+   DISKINODES
+   CPUUNITS
+	
+To apply the user options #1, #2, #3
+   Applies parameters set by the user in a file vzconfig.conf
+	
+EOF
+) > $tmp_help
+}
+
+h_netparam () {
+(
+cat <<EOF
+   IP_ADDRESS
+       Adds and remove IP address to a given VE. Note that this 
+       option is incremental, so addr are added to already existing
+       ones.
+   HOSTNAME
+       Sets VE hostname. vzctl writes it to the appropriate file
+       inside a VE (distribution-dependent).
+   NAMESERVER
+       Sets DNS server IP address for a VE. If you want to set
+       several nameservers, you should do it at once, so use 
+       nameserver option multiple times in one call to  vzctl, as
+       all  the name server values set in previous calls to vzctl 
+       gets overwritten.
+   SEARCHDOMAIN
+       Sets DNS search domains for a VE. If you want to set several 
+       search domains, you should do it at once, so use searchdomain
+       option multiple times in one call to vzctl, as  all  the
+       search domain values set in previous calls to vzctl gets
+       overwritten.
+
+EOF
+) > $tmp_help
+}
+
+h_set_mparam () {
+(
+cat <<EOF
+   ONBOOT yes|no
+        Sets whether this VE will be started during system boot up. VE will not be 
+        auto-started during system boot up unless this parameter is set to yes.
+
+   NAME
+        Add a name for a VE. The name can later be used in subsequent calls to 
+        vzctl in place of veid.
+EOF
+) > $tmp_help
+}
+
+h_pparam () {
+(
+cat <<EOF
+   NUMPROC 
+        Maximum number of processes and kernel-level threads allowed
+        for this container.
+        
+        Many server applications (like Apache Web server, FTP and
+        mail servers) spawn a process to handle each client, so the
+        limit on number of processes defines how many clients the
+        application will be able to handle in parallel. However, the
+        number of processes doesn't limit how “heavy” the application
+        is and whether the server will be able to serve heavy
+        requests from clients.
+        
+        Configuring resource control system, it is important to
+        estimate both the maximum number of processes and the average
+        number of processes (referred to as avnumproc later). Other
+        (dependent) resource control parameters may depend both on
+        the limit and the average number (see UBC consistency check).
+        
+        The barrier of numproc doesn't provide additional control and
+        should be set equal to the limit.
+        
+        There is a restriction on the total number of processes in
+        the system. More than about 16000 processes start to cause
+        poor responsiveness of the system, worsening when the number
+        grows. Total number of processes exceeding 32000 is very
+        likely to cause hang of the system.
+        
+        Note that in practice the number of processes is usually
+        less. Each process consumes some memory, and the available
+        memory and the "low memory" (see “Low memory”) limit the
+        number of processes to lower values. With typical processes,
+        it is normal to be able to run only up to 8000 processes in a
+        system. 
+   NUMTCPSOCK 
+        Maximum number of processes and kernel-level threads allowed
+        for this container.
+        
+        Many server applications (like Apache Web server, FTP and
+        mail servers) spawn a process to handle each client, so the
+        limit on number of processes defines how many clients the
+        application will be able to handle in parallel. However, the
+        number of processes doesn't limit how “heavy” the application
+        is and whether the server will be able to serve heavy
+        requests from clients.
+        
+        Configuring resource control system, it is important to
+        estimate both the maximum number of processes and the average
+        number of processes (referred to as avnumproc later). Other
+        (dependent) resource control parameters may depend both on
+        the limit and the average number (see UBC consistency check).
+        
+        The barrier of numproc doesn't provide additional control and
+        should be set equal to the limit.
+        
+        There is a restriction on the total number of processes in
+        the system. More than about 16000 processes start to cause
+        poor responsiveness of the system, worsening when the number
+        grows. Total number of processes exceeding 32000 is very
+        likely to cause hang of the system.
+        
+        Note that in practice the number of processes is usually
+        less. Each process consumes some memory, and the available
+        memory and the "low memory" (see “Low memory”) limit the
+        number of processes to lower values. With typical processes,
+        it is normal to be able to run only up to 8000 processes in a
+        system. 
+
+   NUMOTHERSOCK 
+        Maximum number of non-TCP sockets (local sockets, UDP and
+        other types of sockets).
+        
+        Local (UNIX-domain) sockets are used for communications
+        inside the system. Multi-tier applications (for example, a
+        Web application with a database server as a back-end) may
+        need one or multiple local sockets to serve each client.
+        Straightforward applications (for example, most mail servers,
+        with the exception of Postfix) do not use local sockets.
+        
+        UDP sockets are used for Domain Name Service (DNS) queries,
+        but the number of such sockets opened simultaneously is low.
+        UDP and other sockets may also be used in some very special
+        applications (SNMP agents and others).
+        
+        The barrier of this parameter should be set equal to the
+        limit. The number of local sockets in a system is not
+        limited. The number of UDP sockets in a system, similarly to
+        TCP sockets, is not limited in OpenVZ systems.
+        
+        Similarly to numtcpsock parameter discussed above, the number
+        of non-TCP sockets needs to be controlled because each socket
+        needs certain amount of memory for its buffers, and the
+        memory is a limited resource. 
+   VMGUARPAGES 
+        Memory allocation guarantee.
+        
+        This parameter controls how much memory is available to the
+        Virtual Environment (i.e. how much memory its applications
+        can allocate by malloc(3) or other standard Linux memory
+        allocation mechanisms). The more clients are served or the
+        more “heavy” the application is, the more memory it needs.
+        
+        The amount of memory that container's applications are
+        guaranteed to be able to allocate is specified as the barrier
+        of vmguarpages parameter. The current amount of allocated
+        memory space is accounted into privvmpages parameter, and
+        vmguarpages parameter does not have its own accounting. The
+        barrier and the limit of privvmpages parameter impose an
+        upper limit on the memory allocations (see privvmpages). The
+        meaning of the limit for the vmguarpages parameter is
+        unspecified in the current version and should be set to the
+        maximal allowed value (MAX_ULONG).
+        
+        If the current amount of allocated memory space does not
+        exceed the guaranteed amount (the barrier of vmguarpages),
+        memory allocations of container's applications always
+        succeed. If the current amount of allocated memory space
+        exceeds the guarantee but below the barrier of privvmpages,
+        allocations may or may not succeed, depending on the total
+        amount of available memory in the system.
+        
+        Starting from the barrier of privvmpages, normal priority
+        allocations and, starting from the limit of privvmpages, all
+        memory allocations made by the applications fail. The memory
+        allocation guarantee (vmguarpages) is a primary tool for
+        controlling the memory available to containers, because it
+        allows administrators to provide Service Level Agreements —
+        agreements guaranteeing certain quality of service, certain
+        amount of resources and general availability of the service.
+        The unit of measurement of vmguarpages values is memory pages
+        (4KB on x86 and x86_64 processors). The total memory
+        allocation guarantees given to containers are limited by the
+        physical resources of the computer — the size of RAM and the
+        swap space — as discussed in UBC systemwide configuration. 
+
+	http://wiki.openvz.org/UBC_primary_parameters
+        
+EOF
+) > $tmp_help
+}
+
+h_sparam () {
+(
+cat <<EOF
+   KMEMSIZE 
+        Size of unswappable memory in bytes, allocated by the
+        operating system kernel. 
+        It includes all the kernel internal data structures
+        associated with the container's processes, except the network
+        buffers discussed below. These data structures reside in the
+        first gigabyte of the computer's RAM, so called “low memory”. 
+        This parameter is related to the number of processes
+        (numproc). Each process consumes certain amount of kernel
+        memory — 24 kilobytes at minimum, 30–60 KB typically. Very
+        large processes may consume much more than that. 
+        It is important to have a certain safety gap between the
+        barrier and the limit of the kmemsize parameter (for example,
+        10%, as in UBC configuration examples). Equal barrier and
+        limit of the kmemsize parameter may lead to the situation
+        where the kernel will need to kill container's applications
+        to keep the kmemsize usage under the limit. 
+        Kmemsize limits can't be set arbitrarily high. The total
+        amount of kmemsize consumable by all containers in the system
+        plus the socket buffer space (see below) is limited by the
+        hardware resources of the system. This total limit is
+        discussed in “low memory”. 
+   TCPSNDBUF 
+        The total size of buffers used to send data over TCP network
+        connections. These socket buffers reside in “low memory”. 
+        Tcpsndbuf parameter depends on number of TCP sockets
+        (numtcpsock) and should allow for some minimal amount of
+        socket buffer memory for each socket, as discussed in UBC
+        consistency check: 
+
+	tcpsndbuf{lim}-tcpsndbuf{bar} > 2.5KB * numtcpsock
+         
+        If this restriction is not satisfied, some network
+        connections may silently stall, being unable to transmit
+        data. 
+        Setting high values for tcpsndbuf parameter may, but doesn't
+        necessarily, increase performance of network communications.
+        Note that, unlike most other parameters, hitting tcpsndbuf
+        limits and failed socket buffer allocations do not have
+        strong negative effect on the applications, but just reduce
+        performance of network communications. 
+        Tcpsndbuf limits can't be set arbitrarily high. The total
+        amount of tcpsndbuf consumable by all containers in the
+        system plus the kmemsize and other socket buffers is limited
+        by the hardware resources of the system. This total limit is
+        discussed in “low memory”. 
+
+   TCPRCVBUF
+        The total size of buffers used to temporary store the data
+        coming from TCP network connections. These socket buffers
+        also reside in “low memory”.
+        
+        Tcprcvbuf parameter depends on number of TCP sockets
+        (numtcpsock) and should allow for some minimal amount of
+        socket buffer memory for each socket, as discussed in UBC
+        consistency check:
+        
+        tcprcvbuf{lim} - tcprcvbuf{bar} > 2.5KB * numtcpsock
+        
+        If this restriction is not satisfied, some network
+        connections may stall, being unable to receive data, and will
+        be terminated after a couple of minutes.
+        
+        Similarly to tcpsndbuf, setting high values for tcprcvbuf
+        parameter may, but doesn't necessarily, increase performance
+        of network communications. Hitting tcprcvbuf limits and
+        failed socket buffer allocations do not have strong negative
+        effect on the applications, but just reduce performance of
+        network communications. However, staying above the barrier of
+        tcprcvbuf parameter for a long time is less harmless than for
+        tcpsndbuf. Long periods of exceeding the barrier may cause
+        termination of some connections.
+        
+        Tcprcvbuf limits can't be set arbitrarily high. The total
+        amount of tcprcvbuf consumable by all containers in the
+        system plus the kmemsize and other socket buffers is limited
+        by the hardware resources of the system. This total limit is
+        discussed in “low memory”.    
+   
+        
+   OTHERSOCKBUF 
+        The total size of buffers used by local (UNIX-domain)
+        connections between processes inside the system (such as
+        connections to a local database server) and send buffers of
+        UDP and other datagram protocols. 
+        Othersockbuf parameter depends on number of non-TCP sockets
+        (numothersock). 
+        Othersockbuf configuration should satisfy 
+
+	othersockbuf{lim} - othersockbuf{bar} > 2.5KB * numothersock
+         
+        Increased limit for othersockbuf is necessary for high
+        performance of communications through local (UNIX-domain)
+        sockets. However, similarly to tcpsndbuf, hitting
+        othersockbuf affects the communication performance only and
+        does not affect the functionality. 
+        Othersockbuf limits can't be set arbitrarily high. The total
+        amount of othersockbuf consumable by all containers in the
+        system plus the kmemsize and other socket buffers is limited
+        by the hardware resources of the system. This total limit is
+        discussed in “low memory”. 
+
+   DGRAMRCVBUF
+        The total size of buffers used to temporary store the
+        incoming packets of UDP and other datagram protocols.
+        
+        Dgramrcvbuf parameters depend on number of non-TCP sockets
+        (numothersock).
+        
+        Dgramrcvbuf limits usually don't need to be high. Only if the
+        containers needs to send and receive very large datagrams,
+        the barriers for both othersockbuf and dgramrcvbuf parameters
+        should be raised.
+        
+        Hitting dgramrcvbuf means that some datagrams are dropped,
+        which may or may not be important for application
+        functionality. UDP is a protocol with not guaranteed
+        delivery, so even if the buffers permit, the datagrams may be
+        as well dropped later on any stage of the processing, and
+        applications should be prepared for it.
+        
+        Unlike other socket buffer parameters, for dgramrcvbuf the
+        barrier should be set to the limit.
+        
+        Dgramrcvbuf limits can't be set arbitrarily high. The total
+        amount of dgramrcvbuf consumable by all containers in the
+        system plus the kmemsize and other socket buffers is limited
+        by the hardware resources of the system. This total limit is
+        discussed in “low memory”. 
+
+   OOMGUARPAGES 
+        The guaranteed amount of memory for the case the memory is
+        “over-booked” (out-of-memory kill guarantee). 
+        Oomguarpages parameter is related to vmguarpages. If
+        applications start to consume more memory than the computer
+        has, the system faces an out-of-memory condition. In this
+        case the operating system will start to kill container's
+        processes to free some memory and prevent the total death of
+        the system. Although it happens very rarely in typical system
+        loads, killing processes in out-of-memory situations is a
+        normal reaction of the system, and it is built into every
+        Linux kernel[1]. 
+        Oomguarpages parameter accounts the total amount of memory
+        and swap space used by the processes of a particular
+        container. The barrier of the oomguarpages parameter is the
+        out-of-memory guarantee. 
+        If the current usage of memory and swap space (the value of
+        oomguarpages) plus the amount of used kernel memory
+        (kmemsize) and socket buffers is below the barrier, processes
+        in this container are guaranteed not to be killed in
+        out-of-memory situations. If the system is in out-of-memory
+        situation and there are several containers with oomguarpages
+        excess, applications in the container with the biggest excess
+        will be killed first. The failcnt counter of oomguarpages
+        parameter increases when a process in this container is
+        killed because of out-of-memory situation. 
+        If the administrator needs to make sure that some application
+        won't be forcedly killed regardless of the application's
+        behavior, setting the privvmpages limit to a value not
+        greater than the oomguarpages guarantee significantly reduce
+        the likelihood of the application being killed, and setting
+        it to a half of the oomguarpages guarantee completely
+        prevents it. Such configurations are not popular because they
+        significantly reduce the utilization of the hardware. 
+        The meaning of the limit for the oomguarpages parameter is
+        unspecified in the current version. 
+        The total out-of-memory guarantees given to the containers
+        should not exceed the physical capacity of the computer, as
+        discussed in UBC systemwide configuration#Memory and swap
+        space. If guarantees are given for more than the system has,
+        in out-of-memory situations applications in containers with
+        guaranteed level of service and system daemons may be killed. 
+
+    PRIVVMPAGES 
+        Memory allocation limit. 
+        Privvmpages parameter allows controlling the amount of memory
+        allocated by applications. The barrier and the limit of
+        privvmpages parameter control the upper boundary of the total
+        size of allocated memory. Note that this upper boundary
+        doesn't guarantee that the container will be able to allocate
+        that much memory, neither does it guarantee that other
+        containers will be able to allocate their fair share of
+        memory. The primary mechanism to control memory allocation is
+        the vmguarpages guarantee. Privvmpages parameter accounts
+        allocated (but, possibly, not used yet) memory. The accounted
+        value is an estimation how much memory will be really
+        consumed when the container's applications start to use the
+        allocated memory. Consumed memory is accounted into
+        oomguarpages parameter. Since the memory accounted into
+        privvmpages may not be actually used, the sum of current
+        privvmpages values for all containers may exceed the RAM
+        and swap size of the computer. There should be a safety gap
+        between the barrier and the limit for privvmpages parameter
+        to reduce the number of memory allocation failures that the
+        application is unable to handle. This gap will be used for
+        “high-priority” memory allocations, such as process stack
+        expansion. Normal priority allocations will fail when the
+        barrier if privvmpages is reached. Total privvmpages should
+        correlate with the physical resources of the computer. Also,
+        it is important not to allow any container to allocate a 
+        significant portion of all system RAM to avoid serious service
+        level degradation for other containers. Both these
+        configuration requirements are discussed in UBC systemwide
+        configuration#Allocated memory. There's also an article
+        describing how user pages accounting works. 
+
+	http://wiki.openvz.org/UBC_secondary_parameters
+EOF
+) > $tmp_help
+}
+
+h_aparam () {
+(
+cat <<EOF
+   LOCKEDPAGES
+          
+          Process pages not allowed to be swapped out (pages locked
+          by mlock(2)).
+          
+          The size of these pages is also accounted into kmemsize.
+          The barrier may be set equal to the limit or may allow some
+          gap between the barrier and the limit, depending on the
+          nature of applications using memory locking features.
+          
+          Note that typical server applications like Web, FTP, mail
+          servers do not use memory locking features.
+          
+          The configuration of this parameter doesn't affect security
+          and stability of the whole system or isolation between
+          containers. Its configuration affects functionality and
+          resource shortage reaction of applications in the given
+          container only.
+   
+   SHMPAGES
+          
+          The total size of shared memory (IPC, shared anonymous
+          mappings and tmpfs objects).
+          
+          These pages are also accounted into privvmpages.
+          
+          The barrier should be set equal to the limit. The
+          configuration of this parameter doesn't affect security and
+          stability of the whole system or isolation between
+          containers. Its configuration affects functionality and
+          resource shortage reaction of applications in the given
+          container only.
+   
+   PHYSPAGES
+          
+          Total number of RAM pages used by processes in this
+          container.
+          
+          For memory pages used by several different containers
+          (mappings of shared libraries, for example), only a
+          fraction of a page is charged to each container. The sum of
+          the physpages usage for all containers corresponds to the
+          total number of pages used in the system by all containers.
+          
+          Physpages is an accounting-only parameter currently. In
+          future OpenVZ releases, this parameter will allow to
+          provide guaranteed amount of application memory, residing
+          in RAM and not swappable. For compatibility with future
+          versions, the barrier of this parameter should be set to 0
+          and the limit to the maximal allowed value (MAX_ULONG).
+   
+   NUMFILE
+          
+          Number of open files.
+          
+          The barrier should be set equal to the limit. The
+          configuration of this parameter doesn't affect security and
+          stability of the whole system or isolation between
+          containers. Its configuration affects functionality and
+          resource shortage reaction of applications in the given
+          container only.
+          
+          Note: actually currently adjusting the barrier will change
+          the kernel behaviour on "pre-charging" the numfile
+          resource. If you change one you will most likely not notice
+          any changes in container behaviour at all. This ability was
+          added for researching purposes purely.
+   
+   NUMFLOCK
+          
+          Number of file locks.
+          
+          The configuration of this parameter should have a gap
+          between the barrier and the limit, as illustrated in UBC
+          configuration examples.
+          
+          Very high limits on numflock parameters and the big number
+          of file locks in the system may cause certain slowdown of
+          the whole system (but not fatal). So, the limits on this
+          parameter should be reasonable, depending on the real
+          requirements of the applications.
+   
+   NUMPTY
+          
+          Number of pseudo-terminals.
+          
+          This parameter is usually used to limit the number of
+          simultaneous shell sessions. The barrier should be set
+          equal to the limit. The configuration of this parameter
+          doesn't affect security and stability of the whole system
+          or isolation between containers. Its configuration affects
+          functionality and resource shortage reaction of
+          applications in the given container only. However, in
+          OpenVZ systems, the actual number of pseudo-terminals
+          allowed for one container is limited to 256.
+   
+   NUMSIGINFO
+          
+          Number of siginfo structures.
+          
+          The size of the structure is also accounted into kmemsize.
+          The default installations of stand-alone Linux systems
+          limit this number to 1024 for the whole system. In OpenVZ
+          installations, numsiginfo limit applies to each container
+          individually.
+          
+          The barrier should be set equal to the limit. Very high
+          settings of the limit of this parameter may reduce
+          responsiveness of the system. It is unlikely that any
+          container will need the limit greater than the Linux
+          default — 1024.
+   
+   DCACHESIZE
+          
+          The total size of dentry and inode structures locked in
+          memory.
+          
+          Dcachesize parameter controls filesystem-related caches,
+          such as directory entry (dentry) and inode caches. The
+          value accounted into dcachesize is also included into
+          kmemsize.
+          
+          Dcachesize exists as a separate parameter to impose a limit
+          causing file operations to sense memory shortage and return
+          an error to applications, protecting from memory shortages
+          during critical operations that shouldn't fail.
+          
+          The configuration of this parameter should have a gap
+          between the barrier and the limit, as illustrated in UBC
+          configuration examples. The configuration of this parameter
+          doesn't affect security and stability of the whole system
+          or isolation between containers. Its configuration affects
+          functionality and resource shortage reaction of
+          applications in the given container only.
+   
+   NUMIPTENT
+          
+          The number of NETFILTER (IP packet filtering) entries.
+          
+          The barrier should be set equal to the limit. There is a
+          restriction on the total number of numiptent. It depends on
+          the amount of other allocations in so called “vmalloc”
+          memory area and constitutes about 250000 entries. Violation
+          of this restriction may cause failures of operations with
+          IP packet filter tables (execution of iptables(8)) in any
+          container or the host system, or failures of container
+          starts. Also, large numiptent cause considerable slowdown
+          of processing of network packets. It is not recommended to
+          allow containers to create more than 200–300 numiptent. 
+
+http://wiki.openvz.org/UBC_auxiliary_parameters
+
+EOF
+) > $tmp_help
+}
+

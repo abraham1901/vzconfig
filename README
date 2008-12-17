@@ -1,0 +1,3 @@
+vzconfig - smart ncurses fron-end for vzctl(server virtualization solution)
+
+Require: vzctl, bash, dialog

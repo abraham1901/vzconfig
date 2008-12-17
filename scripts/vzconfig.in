@@ -1,0 +1,793 @@
+#!/bin/bash
+#
+# vzconfig Copyright (C) 2008 Lebedev Vadim.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+VERSION="@PACKAGE_VERSION@"
+
+etcdir="@PKGCONFDIR@"
+helpdir="@HELPDIR@"
+
+vzconfig=$etcdir/vzconfig.conf
+vzhelp=$helpdir/vzhelp
+
+if [ ! -f $vzconfig ]; then
+	echo "Don't find configuration file vzconfig" 
+	exit -1
+fi
+
+if [ ! -f $vzhelp ]; then
+	echo "Don't find help file $vzhelp" 
+	exit -1
+fi
+
+. $vzconfig
+. $vzhelp
+
+if [ ! -f $DIALOG ]; then
+	echo "Don't find help file $DIALOG. Please install it."
+	exit -1
+fi
+
+result=`mktemp -p /tmp -t result.1.XXXXXX`
+result1=`mktemp -p /tmp -t result.1.XXXXXX`
+tmp_alert=`mktemp -p /tmp -t result.1.XXXXXX`
+
+rm $result $result1 $tmp_alert
+
+COLUMNS=`tput cols`;
+LINES=`tput lines`;
+
+if ([ "$COLUMNS" -le "$MINCOLUMNS" ] || [ "$LINES" -le "$MINLINES" ]); then
+	echo "Error: you window terminals is small, please use size: COLUMNS >= $MINCOLUMNS and LINES >= $MINLINES \
+	or change parameters MINCOLUMNS and MINLINES in vzconfig.conf(It's not recommendation)";
+	exit -1;
+fi
+
+if ! touch $result; then
+	echo "Error: Can not create file $result"
+	exit -1
+fi
+
+if ! which $VZLIST &>/dev/null; then
+	echo "Error: Please install vzctl"
+	exit -1
+fi
+
+echo "$NOW Starting vzconfig session" >> $LOGFILE
+
+alert () {
+	unset quantity_line
+	if [ "$ALERT" = yes ] || (( $1 )); then
+		quantity_line=`cat $tmp_alert|wc -l`
+		if [ `cat $tmp_alert|wc -L` -gt 70 ]; then
+			quantity_line=$((quantity_line*2));
+		fi
+		a_height=$(($quantity_line+4))
+		$DIALOG --msgbox "`cat $tmp_alert`" $a_height 70;
+		EX=$?
+		catch_error	
+	fi
+	if [ -f $tmp_alert ]; then
+		rm $tmp_alert
+	fi
+}
+
+choice_param () {
+	unset RET_LST TMP_PARAM
+	case $SEL_PARAM in
+		1)
+			PARAM="network parameters"
+			HELP="vz_help h_netparam"
+		;;
+		4)
+			PARAM="primary parameters"
+			HELP="vz_help h_pparam"
+		;;
+		5)
+			PARAM="secondary parameters"
+			HELP="vz_help h_sparam"
+		;;
+		6)
+			PARAM="auxiliary parameters"
+			HELP="vz_help h_aparam"
+		;;
+	esac
+
+	$DIALOG --clear --help-button --ok-label "Return" --cancel-label "Exit" --extra-label "Change" --title "Setting $PARAM for VE $veid" --inputmenu "" $height 100 $mheight "${OUT_PARAM[@]}" 2>>$result
+	EX=$?
+
+	echo >> $result;
+
+	catch_error $result
+	RET=$(cat $result |while read RENAME PARAM VALUE; do echo $PARAM $VALUE; done)
+	RETURN=($RET);
+	rm $result
+	case $EX in 
+		0)
+	        	sel_pg
+		;;
+		2)
+			$HELP
+			choice_param
+		;;
+		1)
+	        	exit 1
+		;;
+		3)
+			for ((i=1; i!=${#RETURN[@]}; i++)) {
+				RET_LST[${#RET_LST[@]}]=${RETURN[$i]}
+			}
+			if [ "${RETURN[0]}" = "IP_ADDRESS" ]; then
+                                IP_LST=($IP_ADDRESS)
+
+                                echo ${IP_LST[@]}|tr " " "\n"|sort > $result
+                                echo ${RET_LST[@]}|tr " " "\n"|sort > $result1
+
+				SIGN=+
+				manage_ip add
+				SIGN=-
+				manage_ip del
+
+				rm $result $result1
+				read_param
+			else	
+				TMP_PARAM=${RET_LST[@]};
+				cmd="$VZCTL set $veid --`echo ${RETURN[0]}|tr A-Z a-z` "$TMP_PARAM" --save"
+				echo "$cmd" >> $LOGFILE
+                        	$cmd &>$tmp_alert
+				alert
+				read_param
+                        fi
+		;;
+		-1)
+			echo "Error return code dialog"
+			exit -1
+		;;
+	esac
+}
+
+param_array () {
+	TMP_PARAM=($@)
+	unset OUT_PARAM
+
+	for ((i=1; i!=${#TMP_PARAM[@]}; ++i))
+	{
+		OUT_PARAM[${#OUT_PARAM[@]}]=${TMP_PARAM[$i]};
+		eval OUT_PARAM[${#OUT_PARAM[@]}]=\$${TMP_PARAM[$i]};
+        }
+
+	height=$(((${#OUT_PARAM[@]}/2)*3+6))
+	mheight=$(((${#OUT_PARAM[@]}/2)*3))
+
+	case ${TMP_PARAM[0]} in
+		1)
+			choice_param
+		;;
+		2)
+			set_mparam
+		;;
+	esac
+}
+
+set_param () {
+	echo "Parameters are established for VE $veid" >>$result1
+	echo >>$result1
+	echo "#Primary parameters" >>$result1
+	for ((i=0; i!=${#LST_PPARAM[@]}; i++))
+	{
+		
+		eval TMP_PARAM="\$${LST_PPARAM[$i]}"
+		cmd="$VZCTL set $veid --`echo ${LST_PPARAM[$i]}|tr A-Z a-z` $TMP_PARAM --save"
+		echo "$cmd" >> $LOGFILE
+		$cmd &>$tmp_alert
+		eval echo ${LST_PPARAM[$i]} \$${LST_PPARAM[$i]} >>$result1
+	
+	}
+	echo >>$result1
+	echo "#Secondary parameters" >>$result1
+	for ((i=0; i!=${#LST_SPARAM[@]}; i++))
+	{
+		eval TMP_PARAM="\$${LST_SPARAM[$i]}"
+		cmd="$VZCTL set $veid --`echo ${LST_SPARAM[$i]}|tr A-Z a-z` $TMP_PARAM --save"
+		echo "$cmd" >> $LOGFILE
+		$cmd &>$tmp_alert
+		eval echo ${LST_SPARAM[$i]} \$${LST_SPARAM[$i]} >>$result1
+
+	}
+	echo >>$result1
+	echo "#Auxiliary parameters" >>$result1
+	for ((i=0; i!=${#LST_APARAM[@]}; i++))
+	{
+		eval TMP_PARAM="\$${LST_APARAM[$i]}"
+		cmd="$VZCTL set $veid --`echo ${LST_APARAM[$i]}|tr A-Z a-z` $TMP_PARAM --save"
+		echo "$cmd" >> $LOGFILE
+		$cmd &>$tmp_alert
+		eval echo ${LST_APARAM[$i]} \$${LST_APARAM[$i]} >>$result1
+	}
+
+	height=$((5 + `cat $result1|wc -l`))
+	$DIALOG --msgbox "`cat $result1`" $height 70;
+	EX=$?
+	catch_error
+	rm $result1
+}
+
+set_mparam () {
+	HELP=1
+	MENU_SECTION=(1 "ONBOOT" 2 "Name VE");
+	width=40
+	TITLE="Miscellaneous parameters"
+	CANCEL_LABEL="Return"
+	mk_menu
+	case $EX in
+		0)
+			case $RESULT in
+				1)
+					$DIALOG --yesno "VE will be auto-started during system boot up if your answer yes and remove from auto-started if your anwer no.\nNow this parameter sets to \"$ONBOOT\"" 10 70
+					EX=$?
+					catch_error
+					if (( ! $EX )); then
+						cmd="$VZCTL set $veid --onboot yes --save"
+						echo "$cmd" >> $LOGFILE
+						$cmd &>$tmp_alert
+						alert
+					else
+						cmd="$VZCTL set $veid --onboot no --save"
+						echo "$cmd" >> $LOGFILE
+						$cmd &>$tmp_alert
+						alert
+					fi
+					set_mparam
+				;;
+				2)
+					sel_name 1 $NAME
+					set_mparam
+				;;
+				*)
+					echo "Error 2: Unknown miscellaneous parameter"
+				;;
+			esac
+		;;
+		1)
+			sel_pg
+		;;
+		2)
+			vz_help h_set_mparam
+			set_mparam
+		;;
+		*)
+			echo "Error 1: Unknown miscellaneous parameter"
+			exit -1
+		;;
+	esac	
+}
+
+manage_ip () {
+	diff $result $result1 -u |grep ^$SIGN |grep -v ^$SIGN$SIGN$SIGN |while read IP;
+	do
+		if (echo "${IP:1}" |egrep -q '^[[:space:]]{0,}[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}[[:space:]]{0,}$') || (echo "${IP:1}" |egrep -q "$UNSET_PARAM") || (echo "${IP:1}" |egrep -q '^[[:space:]]{0,}$') ; then
+			if [ "${IP:1}" = "$UNSET_PARAM" ] || (echo "${IP:1}" |egrep -q '^[[:space:]]{0,}$'); then
+				continue;
+			else 
+				cmd="$VZCTL set $veid --ip$1 ${IP:1} --save"
+				echo "$cmd" >> $LOGFILE
+				$cmd &>$tmp_alert
+				alert
+			fi
+		else
+			echo "Are entered not valid ip addresses. Please use a backspace for delimiter of fields. Example: \"123.123.123.123 123.123.123.124\"" &>$tmp_alert
+			alert 1
+			break;
+		fi
+	done
+
+	unset SIGN
+}
+
+read_param () {
+	CLEAR_PARAM=(LST_PPARAM LST_SPARAM LST_APARAM LST_NETPARAM LST_MPARAM)
+	for ((i=0; i!=${#CLEAR_PARAM[@]}; i++)) {
+		eval unset \${${CLEAR_PARAM[$i]}[@]};
+	}
+	. $conf_dir/$veid.conf
+	for ((i=0; i!=${#CLEAR_PARAM[@]}; i++)) {
+		eval TMP_LSTPARAM=(\${${CLEAR_PARAM[$i]}[@]});
+		for ((j=0; j!=${#TMP_LSTPARAM[@]}; j++)) {
+			
+			eval TMP_PARAM=\$${TMP_LSTPARAM[$j]}
+			if [ -z "$TMP_PARAM" ]; then
+				eval ${TMP_LSTPARAM[$j]}="$UNSET_PARAM";
+			fi
+		}
+	}
+
+	case $SEL_PARAM in
+		1)
+			param_array 1 ${LST_NETPARAM[@]}
+		;;
+		2)
+			param_array 2 ${LST_MPARAM[@]}
+		;;
+		3)
+			param_default
+			set_param
+			sel_pg
+		;;
+		4)
+			param_array 1 ${LST_PPARAM[@]}
+		;;
+		5)
+			param_array 1 ${LST_SPARAM[@]}
+		;;
+		6)
+			param_array 1 ${LST_APARAM[@]}
+		;;
+		7)
+			param_user1
+			set_param
+			sel_pg
+		;;
+		8)
+			param_user2
+			set_param
+			sel_pg
+		;;
+		9)
+			param_user3
+                        set_param
+                        sel_pg
+		;;
+		*)
+			echo "Unknown parameter list"
+			exit -1
+		;;
+	esac
+}
+
+sel_pg () {
+	MENU_SECTION=(1 "Network parameters" 2 "Miscellaneous parameters" 3 "Set all parameters to default value" 4 "Primary parameters" 5 "Secondary parameters" 6 "Auxiliary parameters" 7 "To apply the user parameters 1" 8  "To apply the user parameters 2" 9  "To apply the user parameters 3")
+	HELP=1
+	width=60
+	TITLE="$veid: Select parameter group"
+	CANCEL_LABEL="Return"	
+	mk_menu	
+	SEL_PARAM=$RESULT
+	case $EX in
+		0)
+			read_param
+		;;
+		1)
+			sel_ve sel_pg
+		;;
+		2)
+			vz_help h_sel_pg
+			sel_pg
+		;;
+		*)
+			echo "$EX Unknown parameter group"
+			exit -1
+		;;
+	esac
+}
+
+mk_vzlist () {
+	if [ ! "$2" ]; then 
+		OPT="-a";
+	fi
+	
+	l_veid=$($VZLIST -H -oveid $OPT | while read veid;
+	do
+		if (( "$1" )); then
+			echo "\n$veid";
+		else
+			echo $veid;
+		fi
+	done)
+}
+
+mk_ve_menu () {
+
+	mk_vzlist $1
+
+	lst_veid=($l_veid);
+
+	if [ ! "$1" ]; then
+		for ((i=0; i!=${#lst_veid[@]}*2; i=i+2))
+		{ 
+			MENU_SECTION[$i]="$(((i/2)+1))"
+			VEID="${lst_veid[$((i/2))]}"
+			MENU_SECTION[$((i+1))]="`$VZLIST -a |grep $VEID`"
+		}
+	fi
+}
+
+sel_ve () {
+	mk_ve_menu
+	HELP=1
+	width=70
+	TITLE="Choose VE"
+	CANCEL_LABEL="Return"	
+	mk_menu	
+	case $EX in
+		0)
+			veid=(${lst_veid[$((RESULT-1))]})
+			$1			
+		;;
+		1)
+			sel_action
+		;;
+		2)
+			vz_help h_sel_ve
+			sel_ve $1
+		;;
+		*)
+			echo "Unknown VE"
+			exit -1
+		;;
+	esac
+}
+
+sel_id () {
+	mk_ve_menu 1
+	height=$((8 + ${#lst_veid[@]}))
+ 	$DIALOG --clear --cancel-label "Return" --title "Enter the id, new VE" --inputbox "Please use an integer number more then 100.\nDo not use number existing VE: $l_veid" $height 70 2>>$result1
+	EX=$?
+	catch_error $result1
+	ID=`cat $result1`
+	rm $result1
+	case $EX in
+		0)
+			if [ ! $ID ] || [ $ID -le 100 ] ; then
+				echo "Please use an integer number more then 100 for id VE." &>$tmp_alert
+				alert 1
+				sel_id
+			else
+				sel_ostemplate
+			fi
+		;;
+		1)
+			Performing_VE_actions
+		;;
+		*)
+			echo "Unknown id"
+			exit -1
+		;;
+	esac
+
+}
+
+sel_name () {
+	GOTO=$1
+	DATA=$2
+	$DIALOG --clear --cancel-label "Return" --title "Enter the name VE. For example: \"my_ve$veid\" " --inputbox "" 7 70 $DATA 2>>$result1
+	EX=$?
+	catch_error $result1
+	NAME=`cat $result1`
+	rm $result1
+	case $EX in
+		0)
+			cmd="$VZCTL set $veid --name $NAME --save"
+			echo "$cmd" >> $LOGFILE
+			if `$cmd &>$tmp_alert`; then
+				alert
+				sel_action
+			else
+				alert 1
+				sel_name
+			fi
+		;;
+		1)
+			if (($GOTO)); then
+				sel_ostemplate
+			else
+				set_mparam
+			fi
+		;;
+		*)
+			echo "Unknown name"
+			exit -1
+		;;
+	esac
+	unset GOTO
+}
+
+
+sel_ostemplate () {
+	unset TMP_MENU
+	MENU_SECTION[0]=1
+	MENU_SECTION[1]="Use default template"
+	
+	lst_templ=(`ls $templ_dir`);
+	for ((i=2; i!=${#lst_templ[@]}*2+2; i=i+2))
+	{ 
+		MENU_SECTION[$i]="$(((i/2)+1))"
+		MENU_SECTION[$((i+1))]="`echo ${lst_templ[$(((i/2)-1))]} |sed -e 's/.tar.gz//'`"
+		TMP_MENU[($i-2)/2]=${MENU_SECTION[$((i+1))]}
+	}
+	HELP=0
+	width=70
+	TITLE="Select OS template"
+	CANCEL_LABEL="Return"
+	mk_menu
+	case $EX in
+		0)
+			TEMPL=" "
+			if [ $RESULT != "1" ]; then
+				template=${TMP_MENU[$(($RESULT-2))]}
+				TEMPL="--ostemplate $template"
+			fi
+				echo "It will be now created VE. It can become some minutes, press ОК and wait.">$tmp_alert
+				alert 1
+				cmd="$VZCTL create $ID $TEMPL"
+				echo "$cmd" >> $LOGFILE
+				veid=$ID
+				if `$cmd &>$tmp_alert`; then
+					alert
+					sel_name
+				else
+					alert 1
+					Performing_VE_actions
+				fi
+		;;
+		1)
+			sel_id	
+		;;
+		*)
+			echo "Unknown OS template"
+			exit -1
+		;;
+	esac
+}
+
+catch_error () {
+	if ([ "$EX" -eq "-1" ] || [ "$EX" -eq "255" ]); then
+		if [ -f "$1" ]; then 
+			cat $1
+		fi
+		exit -1
+	fi
+}
+
+mk_menu () {
+	height=$((6 + (${#MENU_SECTION[@]}/2)))
+	mheight=$((${#MENU_SECTION[@]}/2))
+	unset HELP_BUTTON
+	if (("$HELP")); then
+		HELP_BUTTON="--help-button"
+	fi
+	$DIALOG --clear --cancel-label "$CANCEL_LABEL"  $HELP_BUTTON --title "$TITLE" --menu "" $height $width $mheight "${MENU_SECTION[@]}"  2>>$result1
+        EX=$?
+	catch_error $result1
+        RESULT=`cat $result1`
+        rm $result1
+	unset MENU_SECTION
+	unset HELP
+}
+
+vz_help () {
+	unset quantity_line
+	$1
+	quantity_line=`cat $tmp_help|wc -l`
+	if [ "`cat $tmp_help|wc -L`" -gt 100 ]; then
+		quantity_line=$((quantity_line*2));
+	fi
+
+	h_height=$(($quantity_line+4))
+	$DIALOG --msgbox "`cat $tmp_help`" $h_height 100;
+	EX=$?
+	catch_error
+	rm $tmp_help
+}
+
+Performing_VE_actions () {
+	MENU_SECTION=(1 "Create new VE" 2 "Choose VE for management");
+	width=40
+	TITLE="Select operation for VE"
+	CANCEL_LABEL="Return"
+	HELP=1
+	mk_menu
+        case $EX in
+                0)
+                        case $RESULT in
+				1)
+					sel_id
+				;;
+				2)
+					sel_ve Performing_VE_actions2
+				;;
+				*)
+					echo "Error 1: Unknown action"
+					exit -1
+				;;
+			esac
+		;;
+		1)
+			sel_action
+		;;
+		2)
+			vz_help h_Performing_VE_actions
+			Performing_VE_actions
+		;;
+		*)
+			echo "Error 2: Unknown action"
+			exit -1
+		;;
+	esac
+}
+
+
+Performing_VE_actions2 () {
+	MENU_SECTION=(1 "Start VE $veid" 2 "Stop VE $veid" 3 "Restart VE $veid" 4 "Status VE $veid" 5 "Mount VE $veid" 6 "Umount VE $veid" 7 "Destroy VE $veid");
+	width=40
+	TITLE="Select operation for VE"
+	CANCEL_LABEL="Return"
+	HELP=1
+	mk_menu
+        case $EX in
+                0)
+                        case $RESULT in
+				1)
+					cmd="$VZCTL start $veid"
+					echo "$cmd" >> $LOGFILE
+					$cmd &>$tmp_alert
+					alert
+					Performing_VE_actions
+				;;
+				2)
+					echo "It will be now stopped VE. It can become some minutes, press ОК and wait.">$tmp_alert
+					alert 1
+					cmd="$VZCTL stop $veid"
+					echo "$cmd" >> $LOGFILE
+					$cmd &>$tmp_alert
+					alert
+					Performing_VE_actions
+				;;				
+				3)
+					echo "It will be now restarted VE. It can become some minutes, press ОК and wait.">$tmp_alert
+					alert
+					cmd="$VZCTL restart $veid"
+					echo "$cmd" >> $LOGFILE
+					$cmd &>$tmp_alert
+					alert
+					Performing_VE_actions
+				;;
+				4)
+					cmd="$VZCTL status $veid"
+					echo "$cmd" >> $LOGFILE
+					$cmd &>$tmp_alert
+					alert 1
+					Performing_VE_actions
+				;;
+				5)
+					cmd="$VZCTL mount $veid"
+					echo "$cmd" >> $LOGFILE
+					$cmd &>$tmp_alert
+					alert
+					Performing_VE_actions
+				;;
+				6)
+					cmd="$VZCTL umount $veid"
+					echo "$cmd" >> $LOGFILE
+					$cmd &>$tmp_alert
+					alert
+					Performing_VE_actions
+				;;				
+				7)
+					cmd="$VZCTL destroy $veid"
+					echo "$cmd" >> $LOGFILE
+					$cmd &>$tmp_alert
+					alert
+					Performing_VE_actions
+				;;
+				*)
+					echo "Error 3: Unknown action"
+					exit -1
+				;;
+				
+			esac
+		;;
+		1)
+			sel_ve Performing_VE_actions2
+		;;
+		2)
+			vz_help h_Performing_VE_actions
+			Performing_VE_actions2
+		;;
+		*)
+			echo "Error 4: Unknown action"
+			exit -1
+		;;
+	esac
+}
+
+sel_action () {
+	MENU_SECTION=(1 "Performing VE actions" 2 "Setting VE parameters");
+	HELP=1
+	width=50
+	TITLE="Select action"
+	CANCEL_LABEL="Exit"	
+	mk_menu 
+	case $EX in
+		0)
+			case $RESULT in
+				1)
+					Performing_VE_actions
+				;;
+				2)
+					sel_ve sel_pg
+				;;
+				*)
+					echo "Error 5: Unknown action"
+				;;
+			esac
+		;;
+		1)
+			exit 1
+		;;
+		2)
+			vz_help h_sel_action
+			sel_action
+		;;
+		*)
+			echo "Error 6: Unknown action"
+			exit -1
+		;;
+	esac
+}
+
+echo_help () {
+cat <<EOF
+Usage: vzconfig [OPTION]
+If you do not use OPTION, then run GUI.
+  -C "command"	command executed in all VE
+  --help	display this help and exit
+  --version  	output version information and exit
+EOF
+}
+
+case "$1" in
+	-C)
+		mk_vzlist 0 1
+		
+		for exclude in $VZEXCLUDE
+		do
+			l_veid=`echo $l_veid | sed "s/\b$exclude\b//g"`
+		done
+		
+		lst_veid=($l_veid);
+
+		for VEID in ${lst_veid[@]}
+		do
+			vzctl exec $VEID "$2"
+		done
+
+		exit 0
+	;;
+	--help|-h)
+		echo_help
+		exit 2
+	;;
+	--version|-v)
+		echo $VERSION
+		exit 2
+	;;
+	"")
+		:;
+	;;
+	*)
+		echo vzconfig: unrecognized option "$1"
+		echo_help
+		exit 2
+	;;	
+esac
+
+sel_action

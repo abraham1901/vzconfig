@@ -1,0 +1,26 @@
+vzconfig (0.2beta~hardy) hardy; urgency=low
+
+  * Add cmd options;
+  * Add logging;
+  * add completion file
+  * BUG FIX.
+
+ -- Lebedev Vadim <p_p@rg.ru>  Mon, 15 Dec 2008 01:07:56 +0300
+
+vzconfig (0.1beta1) hardy; urgency=low
+
+  * BUG FIX.
+  
+ -- Lebedev Vadim <p_p@rg.ru>  Sat, 22 Nov 2008 23:28:40 +0300
+
+vzconfig (0.18alpha1) hardy; urgency=low
+
+  * BUG FIX.
+
+ -- Lebedev Vadim <p_p@rg.ru>  Mon, 17 Nov 2008 00:43:29 +0300
+
+vzconfig (0.17alpha1) hardy; urgency=low
+
+  * Initial release.
+
+ -- Lebedev Vadim <p_p@rg.ru>  Wed, 05 Nov 2008 16:07:57 +0300

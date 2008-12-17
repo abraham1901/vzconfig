@@ -1,0 +1,50 @@
+#!/usr/bin/make -f
+# Uncomment this to turn on verbose mode.
+# export DH_VERBOSE=1
+
+config.status: configure
+	dh_testdir
+	./configure --prefix=/usr --mandir=\$${prefix}/share/man --localstatedir=/var --enable-bashcomp
+
+build: build-stamp
+
+build-stamp:  config.status
+	dh_testdir
+	$(MAKE)
+	touch build-stamp
+
+clean:
+	dh_testdir
+
+	[ ! -f Makefile ] || $(MAKE) distclean
+	-rm -f `find . -name "*~"`
+	-rm  -f build-stamp
+
+	dh_clean 
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k 
+	dh_installdirs
+	dh_installdocs
+                   	
+	dh_installchangelogs
+
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/vzconfig
+
+binary-indep: build install
+	dh_testdir
+	dh_testroot
+	dh_installmenu
+	dh_fixperms
+	dh_compress --exclude=vzhelp
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary-arch: build install
+
+binary: binary-indep
+.PHONY: binary binary-indep clean install 

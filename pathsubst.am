@@ -1,0 +1,21 @@
+if ENABLE_BASHCOMP
+bashcdir    = $(sysconfdir)/bash_completion.d
+endif
+
+vzcachedir  = /vz/template/cache
+pkgconfdir  = $(sysconfdir)/vz
+helpdir = $(datarootdir)/doc/vzconfig
+
+pathsubst_RULES = \
+	s!@'SBINDIR'@!$(sbindir)!g; \
+	s!@'BINDIR'@!$(bindir)!g; \
+	s!@'PKGCONFDIR'@!$(pkgconfdir)!g; \
+	s!@'VZCACHEDIR'@!$(vzcachedir)!g; \
+	s!@'HELPDIR'@!$(helpdir)!g; \
+	s!@'PACKAGE_VERSION'@!$(PACKAGE_VERSION)!g; \
+	s!@'LOCALSTATEDIR'@!$(localstatedir)!g;
+
+pathsubst = sed -e '$(pathsubst_RULES)'
+
+%: %.in
+	$(pathsubst) $< > $@

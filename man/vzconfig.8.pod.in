@@ -1,0 +1,46 @@
+=head1 NAME
+
+  vzconfig - GUI fron-end for vzctl(server virtualization solution)
+
+=head1 SYNOPSIS
+       
+  vzconfig [OPTION]...
+
+=head1 DESCRIPTION
+
+  vzconfig - it`s GUI fron-end for vzctl based on bash script 
+  and used ncurses utilities for displays user-friendly dialog
+  boxes from shell scripts.
+
+=head1 OPTIONS
+
+  If you do not use OPTION, then run GUI.
+
+  -C "command"
+
+    Command executed in all VE. With this option, vzconfig use 
+    VZEXCLUDE variable for exluded VE.
+		
+  --help
+
+    display this help and exit
+
+  --version
+
+    output version information and exit
+
+=head1 AUTHOR
+  
+  Written by Lebedev Vadim.
+  
+=head1 REPORTING BUGS
+  
+  Report bugs to <p_p@rg.ru>.
+  
+=head1 FILES
+
+  @SBINDIR@/vzconfig
+  @PKGCONFDIR@/vzconfig.conf
+  @PKGCONFDIR@/vzhelp.inc
+
+=cut

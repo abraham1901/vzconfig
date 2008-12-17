@@ -1,0 +1,13 @@
+Source: vzconfig
+Section: admin
+Priority: optional
+Maintainer: Lebedev Vadim <p_p@rg.ru>
+Build-Depends: debhelper (>= 5)
+Standards-Version: 3.7.3
+
+Package: vzconfig
+Architecture: all
+Depends: vzctl, dialog(>=1.1-20071028)
+Description: GUI fron-end for vzctl(server virtualization solution)
+ vzconfig - it`s GUI fron-end for vzctl based on bash script and used
+ ncurses utilities for displays user-friendly dialog boxes from shell scripts 
