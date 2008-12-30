@@ -11,10 +11,10 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-VERSION="@PACKAGE_VERSION@"
+VERSION=@PACKAGE_VERSION@
 
-etcdir="@PKGCONFDIR@"
-helpdir="@HELPDIR@"
+etcdir=@PKGCONFDIR@
+helpdir=@HELPDIR@
 
 vzconfig=$etcdir/vzconfig.conf
 vzhelp=$helpdir/vzhelp
@@ -46,7 +46,7 @@ rm $result $result1 $tmp_alert
 COLUMNS=`tput cols`;
 LINES=`tput lines`;
 
-if ([ "$COLUMNS" -le "$MINCOLUMNS" ] || [ "$LINES" -le "$MINLINES" ]); then
+if ([ "$1" = "" ] && ([ "$COLUMNS" -le "$MINCOLUMNS" ] || [ "$LINES" -le "$MINLINES" ])); then
 	echo "Error: you window terminals is small, please use size: COLUMNS >= $MINCOLUMNS and LINES >= $MINLINES \
 	or change parameters MINCOLUMNS and MINLINES in vzconfig.conf(It's not recommendation)";
 	exit -1;
@@ -754,8 +754,7 @@ If you do not use OPTION, then run GUI.
 EOF
 }
 
-case "$1" in
-	-C)
+executing () {
 		mk_vzlist 0 1
 		
 		for exclude in $VZEXCLUDE
@@ -764,13 +763,32 @@ case "$1" in
 		done
 		
 		lst_veid=($l_veid);
-
+		
 		for VEID in ${lst_veid[@]}
 		do
-			vzctl exec $VEID "$2"
+			tmp_msg="Starting execute command: \"$cmd\" in VE: \"$VEID\""
+			echo "$tmp_msg" |tee -a $LOGFILE
+#			echo $cmd >> $LOGFILE
+			vzctl exec2 $VEID "$cmd"
 		done
 
+		if [ "$1" = "1" ]; then
+			tmp_msg="Starting execute command: \"$cmd\" on the host system"
+			echo "$tmp_msg" |tee -a $LOGFILE
+			eval $cmd;
+		fi
+
 		exit 0
+}
+
+case "$1" in
+	-C)
+		cmd=`echo $@ | sed "s/$1 //g"`
+		executing
+	;;
+	-C2)
+		cmd=`echo $@ | sed "s/$1 //g"`
+		executing 1
 	;;
 	--help|-h)
 		echo_help

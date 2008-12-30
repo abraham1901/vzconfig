@@ -1,6 +1,6 @@
 AC_PREREQ(2.59)
 
-AC_INIT(vzconfig, 0.2beta, p_p@rg.ru)
+AC_INIT(vzconfig, 0.3beta, p_p@rg.ru)
 
 AM_INIT_AUTOMAKE
 

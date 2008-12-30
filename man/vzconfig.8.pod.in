@@ -20,7 +20,12 @@
 
     Command executed in all VE. With this option, vzconfig use 
     VZEXCLUDE variable for exluded VE.
-		
+
+  -C2 
+
+    Command executed in all VE and on host system. With this option, vzconfig use 
+    VZEXCLUDE variable for exluded VE.
+
   --help
 
     display this help and exit

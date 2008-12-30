@@ -1,3 +1,10 @@
+vzconfig (0.3beta~hardy) hardy; urgency=low
+
+  * Add -C2 executed key
+  * BUG FIX
+
+ -- Lebedev Vadim <p_p@rg.ru>  Tue, 30 Dec 2008 03:48:13 +0300
+
 vzconfig (0.2beta~hardy) hardy; urgency=low
 
   * Add cmd options;
